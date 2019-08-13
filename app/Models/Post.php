@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Cate;
+use Ramsey\Uuid\Uuid;
+use App\Models\Traits\Relationship;
+
+class Post extends Model
+{
+	use SoftDeletes,Relationship;	
+	
+    public $incrementing = false;
+
+	public $casts = ['images'=>'json','extend'=>'json'];  //设置字段格式 
+
+
+	//批量赋值白名单，guarded为黑名单
+    protected $guarded = [
+        'update_at', 'user_id'
+    ];
+
+
+
+	public static function boot()
+	{
+		parent::boot();
+		self::creating(function ($model) {     //创建时生成uuid
+			$model->{$model->getKeyName()} = Uuid::uuid4()->toString();
+		});
+
+        static::saving(function($model) {
+            if( $html = request('content-html-code') ){   //editormd
+				if( empty($model->original['html']) || $html!= $model->original['html']){
+					$model->attributes['html'] = $html;
+					$model->attributes['note'] = mb_substr(strip_tags($model->attributes['html']),0,150); //自动设置note值
+				}
+			}elseif(!empty($model->attributes['content'])){
+				if( empty($model->original['content']) || $model->attributes['content']!=$model->original['content']){
+					$model->attributes['note'] = mb_substr(strip_tags($model->attributes['content']),0,150); //自动设置note值
+				}
+			}
+			//dd($model);
+			if(empty($model->attributes['user_id']) && !empty(Auth::guard('admin')->user()->user_id)){
+				$model->attributes['user_id'] = Auth::guard('admin')->user()->user_id;
+			}
+			return $model;
+        });
+	} 
+
+
+}

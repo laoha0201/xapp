@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Xapp;
+
+class Attachment extends Model
+{
+	protected $xapp;
+	protected $guarded=['created_at'];
+
+	public $casts = ['attaches'=>'json'];  //设置字段格式 
+
+    protected $fileTypes = [
+        'image'  => '/^(gif|png|jpe?g|svg)$/i',
+        'html'   => '/^(htm|html)$/i',
+        'office' => '/^(docx?|xlsx?|pptx?|pps|potx?)$/i',
+        'gdocs'  => '/^(docx?|xlsx?|pptx?|pps|potx?|rtf|ods|odt|pages|ai|dxf|ttf|tiff?|wmf|e?ps)$/i',
+        'text'   => '/^(txt|md|csv|nfo|ini|json|php|js|css|ts|sql)$/i',
+        'video'  => '/^(og?|mp4|webm|mp?g|mov|3gp)$/i',
+        'audio'  => '/^(og?|mp3|mp?g|wav)$/i',
+        'pdf'    => '/^(pdf)$/i',
+        'flash'  => '/^(swf)$/i',
+		'zip'    => '/^(zip|rar|7z|jar|tar|gz|iso)$/i',
+    ];
+
+
+
+    public function __construct($xapp_name='')
+    {        
+		if( $xapp_name && get_xapp($xapp_name) ){
+			$this->xapp = get_xapp($xapp_name);
+			static::addGlobalScope('onexapp',function (Builder $builder){
+				$builder->where('xapp_id',$this->xapp['id']);
+			});
+		}
+    }
+
+
+    public function scopeXapp($query,$xapp)
+    {
+        if(is_numeric($xapp)){		
+			return $query->where('id',$xapp);
+		}elseif(!empty($xapp)){
+			return $query->where('name',$xapp);
+		}
+    }
+   
+
+
+
+
+    /**
+     * @return string
+    */ 
+    protected function getFileType($file)
+    {     
+		$filetype = '';
+		$farr =  array_filter(str2arr($file,'/'));
+		$file = end($farr);
+		$arr = str2arr($file,'.');
+		if(count($arr) === 2 && !empty($arr[1])){
+			$ext = $arr[1];
+			foreach ($this->fileTypes as $type => $pattern) {
+				if (preg_match($pattern, $ext) === 1) {
+					$filetype = $type;
+					break;
+				}
+			}
+		}
+        return $filetype;
+    }
+
+
+}

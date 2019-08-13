@@ -1,0 +1,218 @@
+<?php
+namespace App\Admin\Controllers\Ext;
+
+use App\Admin\Extensions\Tools\BatchCate;
+
+//分类扩展
+class Cate
+{
+
+	/**
+     * add a grid here.
+     */
+    public function grid($grid,&$xapp)
+    {
+		$cate_id = request('cate_id',0);
+		if($cate_id){
+			$grid->model()->cateId($cate_id,$xapp['id']);
+		}
+		$cates = \App\Models\Cate::selectOptions(function ($query) use($xapp){
+				return $query->where('xapp_id', $xapp['id']);
+			}, false,$xapp['sets']['cate']['dir'] ?? false);
+
+		if( !empty($xapp['sets']['cate']['set']) ){
+			$grid->setCates($cates);
+		}
+
+		if( empty(request('trashed'))){
+			$grid->tools(function ($tools) use($xapp){		
+				$tools->batch(function (\Encore\Admin\Grid\Tools\BatchActions $batch) {
+					$batch->add('批改分类', new BatchCate());
+				});
+			});
+		}
+		$grid->column('cate.title', '分类')->display(function() use ($xapp,$cate_id){
+				return "<a href='".admin_base_path('xapps/'.$xapp['name'])."?cate_id=".$this->cate_id."'>".$this->cate['title']."</a>";
+			});
+		if(!empty($xapp['sets']['cate']['group'])){
+			$grid->column('group', '分组');
+		}
+
+		$grid->header(function () use($xapp,$cates,$cate_id){
+		$sel = '';
+		foreach($cates as $key => $title){
+				$selected =  ($key==$cate_id) ? "selected" : "";
+				$sel .= "<option value='{$key}' {$selected}>{$title}</option>";
+		}
+		if(!empty($xapp['sets']['cate']['group'])){
+				$group_sel = '<div class="form-group"><label class="col-sm-3 control-label">新的分组</label><div class="col-sm-7"><select id="change-group" class="form-control" name="group"><option value="">选择分组</option></select></div></div>';
+		}else{
+				$group_sel = '';
+		}
+		return <<<EOF
+
+<div class="row">
+	<div class="col-md-6" style="margin-left:30px;">
+		<div class="input-group input-group-sm">
+			<div class="input-group-addon btn btn-primary"><i class="fa fa-list"></i> 分类选择</div>
+			<select name='cate_id' onchange="window.location.href='?cate_id='+this.options[this.options.selectedIndex].value"  class='form-control'>
+			<option value="">全部</option>
+			{$sel}
+			</select>
+		</div>
+	</div>
+	<div class="col-md-6">
+	</div>
+</div>
+
+<div class="modal" id="grid-modal-change" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span></button>
+        <h4 class="modal-title">批改分类</h4>
+      </div>
+      <div class="modal-body">
+
+		<div class="form-horizontal">
+			<div class="form-group">
+				<label class="col-sm-3 control-label"></label>
+				<div class="col-sm-7">
+					<div class="alert alert-warning alert-dismissable">
+						<button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+						<h4>批改注意</h4>
+						<p>在允许自定义分类设置时，批改后由于不同分类设置不同，有可能会丢失附加数据</p>
+					</div>
+				</div>
+			</div>
+			<div class="form-group">
+				<label class="col-sm-3 control-label">IDs</label>
+				<div class="col-sm-7">
+					<input  class="form-control" id="change-ids" name="ids" value="" readonly="readonly">
+				</div>
+			</div>
+			<div class="form-group">
+				<label class="col-sm-3 control-label">新的分类</label>
+				<div class="col-sm-7">
+					<select id="change-cateid" class="form-control" name="cate_id">
+						<option value="">选择分类</option>
+						{$sel}
+					</select>
+				</div>
+			</div>
+			{$group_sel}
+			<div class="form-group">
+				<div class="col-sm-offset-3 col-sm-7">
+				  <button class="btn btn-default grid-change-submit">确定</button>
+				</div>
+			</div>
+		</div>				
+      </div>
+    </div>
+  </div>
+</div>
+EOF;
+		});	
+
+	}
+
+
+
+
+    public function before_form($form,&$xapp,$rs=false)
+    {
+
+//此处是为了cate中有设置且可更改xapp设置
+			$xapp->cate = [];
+			//合并分类设置
+			if(  !empty($xapp['sets']['cate']['set']) ){
+				if($rs && !empty($rs->cate_id)){
+					$cate_id = $rs->cate_id;
+				}else{
+					$cate_id = request('cate_id',0);
+				}
+
+				if( !empty($cate_id) ){
+					$cate = \App\Models\Cate::find($cate_id);
+					if(!empty($cate) && !empty($cate['sets'])){		
+						$temset = $cate['sets'];
+						$temset['base'] = !empty($cate['sets']['base']) ? array_merge($xapp['sets']['base'],$cate['sets']['base']) : $xapp['sets']['base'];  //保持原开关
+
+						$xapp['sets'] = array_merge($xapp['sets'],$temset);
+						$cate = $cate->toArray();
+						$xapp->cate = $cate;
+					}
+					
+				}else{
+					admin_error('错误','必须先指定分类方可操作');
+					back();				
+				}
+			}	
+
+			if(!empty($xapp['sets']['cate']['group'])){
+				if( !empty($xapp['sets']['cate']['set']) ){
+					$form->select('cate_id', '分类')->options(\App\Models\Cate::selectOptions(function ($query) use($xapp){
+						return $query->where('xapp_id', $xapp['id']);
+					}, '未定义',$xapp['sets']['cate']['dir'] ?? false))->load('group',route('admin.api.get_cate_groups'))->default($cate_id)->rules('required|integer')->readonly();
+				}else{
+					$form->select('cate_id', '分类')->options(\App\Models\Cate::selectOptions(function ($query) use($xapp){
+						return $query->where('xapp_id', $xapp['id']);
+					}, '未定义',$xapp['sets']['cate']['dir'] ?? false))->load('group',route('admin.api.get_cate_groups'))->default($cate_id)->rules('required|integer');				
+				}
+
+				$form->select('group','组')->options(function () use($cate){
+					$arr = [];
+					if(!empty($cate) && !empty($cate->groups)){
+							$groups = explode(',', $cate->groups);
+							foreach($groups as $k=>$v){
+								$arr[$v]=$v;
+							}
+					}
+					return $arr;					
+				});
+			}else{
+				if( !empty($xapp['sets']['cate']['set']) ){
+					$form->select('cate_id', '分类')->options(\App\Models\Cate::selectOptions(function ($query) use($xapp){
+							return $query->where('xapp_id', $xapp['id']);
+						}, '未定义',$xapp['sets']['cate']['dir'] ?? false))->default($cate_id)->rules('required|integer')->readonly();	
+				}else{
+					$form->select('cate_id', '分类')->options(\App\Models\Cate::selectOptions(function ($query) use($xapp){
+							return $query->where('xapp_id', $xapp['id']);
+						}, '未定义',$xapp['sets']['cate']['dir'] ?? false))->default($cate_id)->rules('required|integer');					
+				}
+			}		
+	}
+
+
+    public function before_show($show,&$xapp,$id=0)
+	{
+		if(  !empty($xapp['sets']['cate']['set']) ){
+			$cate_id = request('cate_id',0);
+			$cate = [];
+			if(empty($cate_id) && $id){
+					$rs = \App\Models\Post::findOrFail($id);
+					$cate_id = $rs->cate_id;
+			}
+
+			//合并分类设置
+			
+			$cate_id = request('cate_id',0);
+			if( !empty($cate_id) ){
+				$cate = \App\Models\Cate::find($cate_id)->toArray();
+				if(!empty($cate) && !empty($cate['sets'])){
+					$cate['sets']['base']['cate'] = empty($xapp['sets']['base']['cate'])? 0 : 1;  //分类开关保持
+					$xapp['sets'] = array_merge($xapp['sets'],$cate['sets']);
+				}		
+			}
+		}	
+	}
+
+    public function show($show,$xapp,$id=0)
+    {
+		$show->field('cate.title','分类')->as(function(){
+				return $this->cate['title'];
+			});
+		$show->field('group','分组');
+	}
+}

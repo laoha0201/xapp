@@ -1,0 +1,165 @@
+<?php
+
+namespace App\Admin\Controllers;
+
+use Encore\Admin\Layout\Content;
+use Illuminate\Routing\Controller;
+use App\Models\Xapp;
+
+class BaseController extends Controller
+{
+
+    /**
+     * Title for current resource.
+     *
+     * @var string
+     */
+    protected $title = 'Title';
+	  public $xapp;
+	  public $id = 0;
+    /**
+     * Set breadcrumb for following 4 action pages.
+     *
+     * @var array
+     */
+    public function breadcrumb(){
+		  return [
+			  'index'  => [['text' => $this->title,'url'=>admin_base_path('xapps/'.$this->xapp->name)],['text' => '列表']],
+			  'show'   => [['text' => $this->title,'url'=>admin_base_path('xapps/'.$this->xapp->name)],['text' => '内容']],
+			  'edit'   => [['text' => $this->title,'url'=>admin_base_path('xapps/'.$this->xapp->name)],['text' => '编辑']],
+			  'create' => [['text' => $this->title,'url'=>admin_base_path('xapps/'.$this->xapp->name)],['text' => '新建']],
+		  ];
+	  }
+    /**
+     * Get content title.
+     *
+     * @return string
+     */
+    protected function title()
+    {
+        return $this->title;
+    }
+
+    
+    /**
+     * Index interface.
+     *
+     * @param Content $content
+     *
+     * @return Content
+     */
+    public function index(Content $content,Xapp $xapp)
+    {
+		    $this->xapp  = $xapp;
+		    $this->title = $xapp->title;
+		    return $content
+            ->title($this->title())
+			      ->breadcrumb($this->breadcrumb()['index'][0],$this->breadcrumb()['index'][1])
+            ->description($this->description['index'] ?? trans('admin.list'))
+            ->body($this->grid());
+    }
+
+    /**
+     * Show interface.
+     *
+     * @param mixed   $id
+     * @param Content $content
+     *
+     * @return Content
+     */
+    public function show(Content $content,Xapp $xapp,$id)
+    {
+		  $this->xapp  = $xapp;
+		  $this->title = $xapp->title;
+		  $this->id = $id;
+		  return $content
+        ->title($this->title())
+			  ->breadcrumb($this->breadcrumb()['show'][0],$this->breadcrumb()['show'][1])
+        ->description($this->description['show'] ?? trans('admin.show'))
+        ->body($this->detail($id));
+    }
+
+    /**
+     * Edit interface.
+     *
+     * @param mixed   $id
+     * @param Content $content
+     *
+     * @return Content
+     */
+    public function edit(Content $content,Xapp $xapp,$id)
+    {
+		    $this->xapp  = $xapp;
+		    $this->title = $xapp->title;
+		    $this->id = $id;
+		    return $content
+            ->title($this->title())
+			      ->breadcrumb($this->breadcrumb()['edit'][0],$this->breadcrumb()['edit'][1])
+            ->description($this->description['edit'] ?? trans('admin.edit'))
+            ->body($this->form()->edit($id));
+    }
+
+    /**
+     * Create interface.
+     *
+     * @param Content $content
+     *
+     * @return Content
+     */
+    public function create(Content $content,Xapp $xapp)
+    {
+		    $this->xapp  = $xapp;
+		    $this->title = $xapp->title;
+		    return $content
+            ->title($this->title())
+			      ->breadcrumb($this->breadcrumb()['create'][0],$this->breadcrumb()['create'][1])
+            ->description($this->description['create'] ?? trans('admin.create'))
+            ->body($this->form());
+    }
+
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param int $id
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Xapp $xapp,$id)
+    {
+        $this->xapp  = $xapp;
+        $this->id    = $id;
+		    return $this->form()->update($id);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @return mixed
+     */
+    public function store(Xapp $xapp)
+    {
+		    $this->xapp  = $xapp;
+		    return $this->form()->store();
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param int $id
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(Xapp $xapp,$id)
+    {
+		    $this->xapp  = $xapp;
+        if(empty($id)){
+			      $response = [
+                'status'  => false,
+                'message' => '未指定操作记录d',
+            ];
+			      return response()->json($response);
+        }        
+		    return $this->form()->destroy($id);
+    }
+}

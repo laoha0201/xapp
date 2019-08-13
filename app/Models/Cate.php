@@ -1,0 +1,87 @@
+<?php
+
+namespace App\Models;
+
+use Encore\Admin\Traits\AdminBuilder;
+use App\Models\Traits\Tree;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Builder;
+
+
+class Cate extends Model
+{
+	use AdminBuilder, Tree {
+        Tree::boot as treeBoot;
+    }
+	protected $casts = ['sets'=>'json','extend' => 'json'];  //需要设置字段的json cast,'cate_id' => 'integer'
+
+	
+
+
+    /**
+     * Create a new Eloquent model instance.
+     *
+     * @param array $attributes
+     */
+    public function __construct($xapp_id = 0)
+    {
+        if($xapp_id){
+			static::addGlobalScope('app',function(Builder $builder) use($xapp_id){
+				$builder->where('xapp_id',$xapp_id);
+			});
+		}
+
+        parent::__construct();
+    }
+
+
+
+    /**
+     * {@inheritdoc}
+     */
+    public function delete()
+    {
+        $ids = $this->getnodeids($this->getKey());
+		if($ids && count($ids)>1){
+			unset($ids[0]);
+			if($ids) $this->whereIn('id',$ids)->delete();
+		}
+        return parent::delete();
+    }
+
+    /**
+     * determine if enable menu bind permission.
+     *
+     * @return bool
+     */
+
+ 
+    public function scopeStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeCate($query, $id,$xapp_id=0)
+    {
+        if($id){
+			$ids = $this->getnodeids($id,$xapp_id);
+			return $query->whereIn('id', $ids);
+		}
+    }
+
+    public function scopeRoot($query, $xapp_id)
+    {
+        return $query->where('xapp_id', $xapp_id);
+    }  
+
+
+
+	public function xapp()
+	{
+		return $this->belongsTo(\App\Models\Xapp::class, 'xapp_id','id');
+	}
+
+
+}

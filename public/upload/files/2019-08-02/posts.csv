@@ -1,0 +1,4 @@
+Id,App_id,User_id,Cate_id,Title,Content,Parse,Extend,Image,Desc,Pos,Group,Checked,Created_at,Updated_at,Deleted_at,User,"Cate id","Cate app_id","Cate parent_id","Cate name","Cate title"
+3,1,1,3,gfgf,十一王gggg,,,images/2019-07-28/0ef43ce76b0434330d9c32591fd93d7a.jpg,,"asas,sdds",adsdf,1,"2019-07-21 23:23:13","2019-07-28 21:06:21",
+2,1,1,1,新闻,sddddddddddddddddddd,,,,,,,1,"2019-07-21 22:53:24","2019-07-28 22:53:09",
+1,1,1,4,李克勤,sddddddddddddsdddddddddddddddddddddd,,,,,,,1,"2019-07-21 22:52:45","2019-07-28 22:53:17",
